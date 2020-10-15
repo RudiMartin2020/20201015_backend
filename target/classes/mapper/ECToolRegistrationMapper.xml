@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rms.backend.mapper.ECToolRegistrationMapper">
+
+    <select id="getToolList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT  EVEP.LOCATION_RAWID
+               ,EVEP.AREA_RAWID
+               ,EVEP.SITE
+               ,EVEP.FAB
+               ,EVEP.LINE
+               ,EVEP.AREA
+               ,EVEP.MODULE_ID
+               ,EVEP.EQP_MODEL
+               ,EVEP.EQP_TYPE
+               ,EVEP.EQP_ID
+               ,EME.RAWID AS EQP_RAWID
+               ,CASE WHEN EME.INTERLOCK_SEND_YN='Y' THEN  'true' ELSE 'false' END AS INTERLOCK_SEND_YN
+               ,CASE WHEN EME.UPLOAD_YN='Y' THEN  'true' ELSE 'false' END  AS UPLOAD_YN
+               ,CASE WHEN EME.DOWNLOAD_YN='Y' THEN 'true' ELSE 'false' END  AS DOWNLOAD_YN
+               ,CASE WHEN EME.VALIDATION_YN='Y' THEN 'true' ELSE 'false' END   AS VALIDATION_YN
+               ,CASE WHEN EME.USED_YN='Y' THEN  'true' ELSE 'false' END   AS USED_YN
+               ,IEMP.EQP_ID AS INLINE_EQP_ID , EME.INLINE_EQP_RAWID
+               ,TO_CHAR(EME.CREATE_DTTS, 'YYYY-MM-DD HH24:MI:SS.FF3') AS CREATE_DTTS
+               ,EME.CREATE_BY
+               ,TO_CHAR(EME.LAST_UPDATE_DTTS, 'YYYY-MM-DD HH24:MI:SS.FF3') AS LAST_UPDATE_DTTS
+               ,EME.LAST_UPDATE_BY
+               ,EME.VALIDATION_MODE
+               ,EME.DOWNLOAD_MODE
+               ,EVEP.MODULE_NAME
+               ,EVEP.MODULE_TYPE_CD
+               ,CASE WHEN amr.approval_rawid is not null THEN 'true' else 'false' end AS ISAPPROVALWAIT
+               ,AMR.APPROVAL_STATUS
+        FROM EQP_VW_ECM_PP EVEP
+        LEFT OUTER JOIN EQP_MST_ECM EME ON EVEP.MODULE_ID= EME.MODULE_ID
+        LEFT OUTER JOIN EQP_MST_ECM IEME ON EME.INLINE_EQP_RAWID = IEME.RAWID
+        LEFT OUTER JOIN EQP_MST_PP IEMP ON IEME.MODULE_ID = IEMP.MODULE_ID
+        LEFT OUTER JOIN (  SELECT  distinct AMR.APPROVAL_STATUS, AMR.RAWID AS APPROVAL_RAWID ,ADR.EQP_ID ,AMR.LOCATION_RAWID, AMR.AREA_RAWID
+                           FROM APPROVAL_MST_RMS AMR INNER JOIN APPROVAL_DATA_RMS ADR
+                                                          ON AMR.RAWID = ADR.APPROVAL_RAWID AND AMR.APPLICATION_NAME='ECM' AND AMR.APPROVAL_STATUS NOT IN ('C') )  AMR
+                        ON EVEP.EQP_ID = AMR.EQP_ID  AND EVEP.LOCATION_RAWID = AMR.LOCATION_RAWID AND EVEP.AREA_RAWID = AMR.AREA_RAWID
+        WHERE 1=1
+        <if test="LOCATION_RAWID not in {null,''}">
+            AND  EVEP.LOCATION_RAWID = #{LOCATION_RAWID}
+        </if>
+        <if test="AREA_RAWID not in {null,''}">
+            AND EVEP.AREA_RAWID = #{AREA_RAWID}
+        </if>
+        <if test="EQP_MODEL not in {null,''} and EQP_MODEL.size != 0 ">
+            AND EVEP.EQP_MODEL IN
+            <foreach item="item" index="index" collection="EQP_MODEL" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        <if test="EQP_TYPE not in {null,''} and EQP_TYPE.size != 0 ">
+            AND EVEP.EQP_TYPE IN
+            <foreach item="item" index="index" collection="EQP_TYPE" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        <if test="EQP_ID not in {null,''} and EQP_ID.size != 0 ">
+            AND EVEP.EQP_ID IN
+            <foreach item="item" index="index" collection="EQP_ID" open="(" separator="," close=")">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY EVEP.LOCATION_RAWID, EVEP.AREA_RAWID, EVEP.EQP_MODEL, EVEP.EQP_ID
+    </select>
+
+    <select id="getInLineEQPList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT EQP_RAWID, USED_YN, UPLOAD_YN, VALIDATION_YN, DOWNLOAD_YN
+             , INTERLOCK_SEND_YN, LOCATION_RAWID, AREA_RAWID, EQP_MODEL
+             , EQP_TYPE, EQP_ID, MODULE_ID, MODULE_NAME, MODULE_TYPE_CD
+             , SITE, FAB, LINE, AREA, INLINE_EQP_RAWID
+        FROM   EQP_VW_ECM
+        WHERE  1=1
+        <if test="LOCATION_RAWID not in {null,''}">
+        AND    LOCATION_RAWID = #{LOCATION_RAWID}
+        </if>
+        <if test="AREA_RAWID not in {null,''}">
+        AND    AREA_RAWID = #{AREA_RAWID}
+        </if>
+    </select>
+
+    <insert id="insert" parameterType="java.util.HashMap" >
+        <selectKey keyProperty="RAWID" resultType="int" order="BEFORE">
+            SELECT SEQ_EQP_MST_ECM.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO EQP_MST_ECM
+               (RAWID, MODULE_ID, USED_YN, INTERLOCK_SEND_YN, DOWNLOAD_YN, VALIDATION_YN, INLINE_EQP_RAWID, CREATE_DTTS, CREATE_BY)
+        VALUES (#{RAWID}, #{MODULE_ID}, #{USED_YN}, #{INTERLOCK_SEND_YN}, #{DOWNLOAD_YN}, #{VALIDATION_YN}, #{INLINE_EQP_RAWID}, SYSDATE, #{CREATE_BY})
+    </insert>
+
+    <update id="update" parameterType="java.util.HashMap" >
+        UPDATE EQP_MST_ECM
+        SET    USED_YN           = #{USED_YN}
+             , INTERLOCK_SEND_YN = #{INTERLOCK_SEND_YN}
+             , DOWNLOAD_YN       = #{DOWNLOAD_YN}
+             , VALIDATION_YN     = #{VALIDATION_YN}
+             , INLINE_EQP_RAWID  = #{INLINE_EQP_RAWID}
+             , LAST_UPDATE_DTTS  = SYSDATE
+             , LAST_UPDATE_BY    = #{LAST_UPDATE_BY}
+        WHERE  MODULE_ID         = #{MODULE_ID}
+    </update>
+
+    <select id="getInLineEQPCheckList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        SELECT DISTINCT EME2.INLINE_EQP_RAWID, EMP.EQP_ID AS INLINE_EQP, #{ROW_NO} AS ROW_NO, #{EQP_ID} AS DUPLICATION_EQP_ID
+        FROM   EQP_MST_ECM EME
+               INNER JOIN EQP_MST_ECM EME2 ON EME2.INLINE_EQP_RAWID = EME.RAWID
+               INNER JOIN EQP_MST_PP EMP ON EME.MODULE_ID = EMP.MODULE_ID
+               INNER JOIN EQP_MST_PP EMP2  ON EME2.MODULE_ID = EMP2.MODULE_ID
+        WHERE  (EME2.INLINE_EQP_RAWID IS NOT NULL OR EME2.INLINE_EQP_RAWID &lt;&gt; '')
+        <if test="EQP_ID not in {null,''}">
+            AND EMP2.EQP_ID &lt;&gt; #{EQP_ID}
+        </if>
+        <if test="INLINE_EQP_ID not in {null,''}">
+            AND EMP.EQP_ID  = #{INLINE_EQP_ID}
+        </if>
+    </select>
+
+    <delete id="delete" parameterType="java.util.HashMap" >
+        DELETE FROM EQP_MST_ECM
+        WHERE RAWID = #{EQP_RAWID}
+    </delete>
+
+    <delete id="deleteECSPEC" parameterType="java.util.HashMap" >
+        DELETE FROM EC_SPEC_MST_ECM
+        WHERE EQP_RAWID = #{EQP_RAWID}
+    </delete>
+
+    <delete id="deleteEC" parameterType="java.util.HashMap" >
+        DELETE FROM EC_MST_ECM
+        WHERE EQP_RAWID = #{EQP_RAWID}
+    </delete>
+
+    <insert id="insertHst" parameterType="java.util.HashMap" >
+        <selectKey keyProperty="RAWID" resultType="int" order="BEFORE">
+            SELECT SEQ_EQP_HST_ECM.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO EQP_HST_ECM
+               (RAWID, EQP_RAWID, ACTION_TYPE, MODULE_ID, USED_YN, INTERLOCK_SEND_YN, UPLOAD_YN, DOWNLOAD_YN, VALIDATION_YN,
+                INLINE_EQP_RAWID, APPROVAL_RAWID, LOCATION_RAWID, AREA_RAWID, EQP_MODEL, EQP_ID, DESCRIPTION, CREATE_DTTS, CREATE_BY, OLD_VALUE)
+        VALUES (#{RAWID}, #{EQP_RAWID}, #{ACTION_TYPE}, #{MODULE_ID}, #{USED_YN}, #{INTERLOCK_SEND_YN}, #{UPLOAD_YN}, #{DOWNLOAD_YN}, #{VALIDATION_YN},
+                #{INLINE_EQP_RAWID}, #{APPROVAL_RAWID}, #{LOCATION_RAWID}, #{AREA_RAWID}, #{EQP_MODEL}, #{EQP_ID}, #{DESCRIPTION}, SYSDATE, #{CREATE_BY}, #{OLD_VALUE})
+    </insert>
+
+</mapper>

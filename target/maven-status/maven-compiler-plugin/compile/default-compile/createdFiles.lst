@@ -1,0 +1,17 @@
+com\example\demo\DemoApplication.class
+com\example\demo\service\TodoService.class
+com\example\demo\rest\OauthController$OauthTokenDto.class
+com\example\demo\config\WebConfig.class
+com\example\demo\mapper\TodoMapper.class
+com\example\demo\component\PublishCom.class
+com\example\demo\config\AuthorizationServerConfigurer.class
+com\example\demo\config\ResourceServerConfig.class
+com\example\demo\domain\TestUser.class
+com\example\demo\config\CorsFilter.class
+com\example\demo\rest\SampleContoller.class
+com\example\demo\config\SecurityConfig.class
+com\example\demo\config\OauthAuthenticationProvider.class
+com\example\demo\rest\OauthController.class
+com\example\demo\domain\Todo.class
+com\example\demo\component\SubscribeCom.class
+com\example\demo\util\JAXBUtil.class

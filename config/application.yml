@@ -1,0 +1,38 @@
+spring:
+  db1:
+    #initialization-mode: never
+#    datasource:
+#      driver-class-name: org.h2.Driver
+#      jdbcurl: jdbc:h2:mem:demodb
+#      username: sa
+#      password: bistel01
+  datasource:
+    driver-class-name: oracle.jdbc.driver.OracleDriver
+    jdbc-url: jdbc:oracle:thin:@10.150.1.144:1521:eesdev
+    username: rmsadm
+    password: bistel01
+
+  h2:
+    console:
+      enabled: true
+
+  #activemq:
+  #  broker-url: tcp://10.150.1.144:61616
+
+
+#destination:
+#  topic:
+#    server: AMQ_RMS_CLIENT_SERVER_TEST
+#    client: AMQ_RMS_SERVER_REVOKE_TEST
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    lazyLoadingEnabled: true
+    aggressiveLazyLoading: false
+    mapUnderscoreToCamelCase: true
+
+logging:
+  level:
+    root: error
+    rms.backend: debug

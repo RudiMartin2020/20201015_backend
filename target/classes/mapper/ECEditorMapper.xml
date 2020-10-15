@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="rms.backend.mapper.ECEditorMapper">
+
+    <select id="getECSPECList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+        WITH EQP_ECM AS
+        (
+            SELECT EME.RAWID, EMP.EQP_ID
+              FROM EQP_MST_ECM EME
+             INNER JOIN EQP_MST_PP EMP ON EME.MODULE_ID = EMP.MODULE_ID
+                                      AND EMP.MODULE_TYPE_CD = 'M'
+                                    <if test="LOCATION_RAWID not in {null,''}">
+                                      AND EMP.LOCATION_RAWID = #{LOCATION_RAWID}
+                                    </if>
+                                    <if test="AREA_RAWID not in {null,''}">
+                                      AND EMP.AREA_RAWID = #{AREA_RAWID}
+                                    </if>
+                                    <if test="EQP_ID not in {null,''}">
+                                      AND EMP.EQP_ID = #{EQP_ID}
+                                    </if>
+                                      AND EMP.USED_YN = 'Y'
+             WHERE EME.USED_YN = 'Y'
+        )
+        SELECT EME.RAWID,
+           EME.EQP_RAWID,
+           EME.ECID,
+           EME.NAME,
+           EME.ALIAS,
+           EME.MANAGE_YN,
+           EME.VALUE_TYPE,
+           EME.MIN_VALUE,
+           EME.MAX_VALUE,
+           EME.DEFAULT_VALUE,
+           EME.UNIT_TYPE,
+           EME.UNIT,
+           EME.DATA_TYPE,
+           EME.ENUM,
+           EME.ENUM_VALUE,
+           EME.SPEC_OPTION,
+           EME.SPEC_UNIT,
+           ESME.TARGET,
+           ESME.LSL,
+           ESME.USL,
+           ESME.INTERLOCK_YN,
+           ESME.RAWID AS SPEC_RAWID,
+           ESME.EC_RAWID,
+           EVE.EQP_ID,
+           EME.USED_YN
+        FROM EC_MST_ECM EME
+       INNER JOIN EQP_ECM EVE
+          ON EME.EQP_RAWID = EVE.RAWID
+        LEFT OUTER JOIN EC_SPEC_MST_ECM ESME
+          ON EME.EQP_RAWID = ESME.EQP_RAWID
+         AND EME.RAWID = ESME.EC_RAWID
+       WHERE EME.USED_YN = 'Y'
+        <if test="EQP_RAWID not in {null,''}">
+         AND EME.EQP_RAWID = #{EQP_RAWID}
+        </if>
+       ORDER BY EME.RAWID
+    </select>
+
+    <update id="update" parameterType="java.util.HashMap" >
+        UPDATE EC_SPEC_MST_ECM
+        SET    TARGET           = #{TARGET},
+               LSL              = #{LSL},
+               USL              = #{USL},
+               INTERLOCK_YN     = #{INTERLOCK_YN},
+               LAST_UPDATE_DTTS = SYSDATE,
+               LAST_UPDATE_BY   = #{LAST_UPDATE_BY}
+        WHERE  RAWID            = #{SPEC_RAWID}
+    </update>
+
+    <insert id="insert" parameterType="java.util.HashMap" >
+        <selectKey keyProperty="RAWID" resultType="int" order="BEFORE">
+            SELECT SEQ_EC_SPEC_MST_ECM.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO EC_SPEC_MST_ECM
+              (RAWID, EQP_RAWID, EC_RAWID, TARGET, LSL, USL, INTERLOCK_YN, CREATE_DTTS, CREATE_BY)
+        VALUES(#{RAWID}, #{EQP_RAWID}, #{EC_RAWID}, #{TARGET}, #{LSL}, #{USL}, #{INTERLOCK_YN}, SYSDATE, #{CREATE_BY})
+    </insert>
+
+    <delete id="delete" parameterType="java.util.HashMap" >
+        DELETE FROM EC_SPEC_MST_ECM
+        WHERE  RAWID = #{SPEC_RAWID}
+    </delete>
+
+    <insert id="insertHst" parameterType="java.util.HashMap" >
+        <selectKey keyProperty="RAWID" resultType="int" order="BEFORE">
+            SELECT SEQ_EC_SPEC_HST_ECM.NEXTVAL FROM DUAL
+        </selectKey>
+        INSERT INTO EC_SPEC_HST_ECM
+               (
+               RAWID, SPEC_RAWID, EQP_RAWID, EC_RAWID, ACTION_TYPE, TARGET, LSL, USL, INTERLOCK_YN, APPROVAL_RAWID,
+               LOCATION_RAWID, AREA_RAWID, EQP_MODEL, EQP_ID, ECID, DESCRIPTION, CREATE_DTTS, CREATE_BY, ALIAS, OLD_VALUE
+               )
+        VALUES (
+               #{RAWID}, #{SPEC_RAWID}, #{EQP_RAWID}, #{EC_RAWID}, #{ACTION_TYPE}, #{TARGET}, #{LSL}, #{USL}, #{INTERLOCK_YN}, #{APPROVAL_RAWID},
+               #{LOCATION_RAWID}, #{AREA_RAWID}, #{EQP_MODEL}, #{EQP_ID}, #{ECID}, #{DESCRIPTION}, SYSDATE, #{CREATE_BY}, #{ALIAS}, #{OLD_VALUE}
+               )
+    </insert>
+    
+</mapper>
